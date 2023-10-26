@@ -1,4 +1,4 @@
-# Clustering
+# Clustering (Heirarchical)
 # https://www.r-bloggers.com/2016/01/hierarchical-clustering-in-r-2/
 
 # Load the CSV file into a data frame
