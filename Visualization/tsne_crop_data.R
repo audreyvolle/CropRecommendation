@@ -11,8 +11,31 @@ getwd()
 setwd("/Users/audreyvolle/Desktop/School/MachineLearning/CropRecommendation/")
 your_data <- read.csv("Crop_recommendation.csv")
 
-# Perform t-SNE on your data
+# Perform t-SNE on your_data for different combinations of features
+
+# original combination
 tsne_out <- Rtsne(as.matrix(your_data[, c("N", "P", "K", "temperature")]))
+
+# all features
+tsne_out <- Rtsne(as.matrix(your_data[, c("N", "P", "K", "temperature", "humidity" , "ph", "rainfall")]))
+
+# non NPK features
+tsne_out <- Rtsne(as.matrix(your_data[, c("humidity" , "ph", "rainfall")]))
+
+# soil characteristics 
+tsne_out <- Rtsne(as.matrix(your_data[, c("N", "P", "K", "ph")]))
+
+# weather conditions
+tsne_out <- Rtsne(as.matrix(your_data[, c("humidity", "rainfall", "temperature")]))
+
+# one feature test
+tsne_out <- Rtsne(as.matrix(your_data[, c("ph")]))
+
+# NPK elimination test
+tsne_out <- Rtsne(as.matrix(your_data[, c("N", "P", "temperature", "humidity" , "ph", "rainfall")]))
+tsne_out <- Rtsne(as.matrix(your_data[, c("N", "K", "temperature", "humidity" , "ph", "rainfall")]))
+tsne_out <- Rtsne(as.matrix(your_data[, c("P", "K", "temperature", "humidity" , "ph", "rainfall")]))
+tsne_out <- Rtsne(as.matrix(your_data[, c("N", "P", "K", "temperature", "humidity" , "ph", "rainfall")]))
 
 # Create a data frame for t-SNE output
 tsne_plot <- data.frame(x = tsne_out$Y[, 1], y = tsne_out$Y[, 2])
