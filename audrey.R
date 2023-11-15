@@ -66,7 +66,12 @@ table(sampled_data$label)
 # Plot the hierarchical clustering dendrogram with custom labels
 plot(hclust_result, main = "Hierarchical Clustering Dendrogram", sub = "", xlab = "", cex = 0.6, labels = sampled_data$label)
 
-# Split the dataset into training and testing sets
+
+
+
+# Classification
+
+# Split the data set into training and testing sets
 set.seed(123)  # for reproducibility
 splitIndex <- createDataPartition(data$label, p = 0.8, list = FALSE)
 train_data <- data[splitIndex, ]
@@ -113,7 +118,63 @@ for (i in seq_along(roc_curves)) {
 legend("bottomright", legend = legend_labels, col = colors, lwd = 2)
 
 
-# Calculate AUC on filtered data
-auc_value_filtered <- performance(prediction_obj_filtered, "auc")@y.values[[1]]
-cat("AUC (Filtered Data):", auc_value_filtered, "\n")
+# Calculate AUC on filtered data for each class
+auc_values_filtered <- sapply(roc_curves, function(roc_curve) auc(roc_curve))
+cat("AUC for each class (Filtered Data):\n")
+print(auc_values_filtered)
+
+
+# Extract confusion matrix
+conf_matrix <- confusionMatrix(predictions_filtered_factor, as.factor(test_data_filtered$label))
+
+# Extract precision, recall, and F1 score for each class
+precision <- conf_matrix$byClass[, "Pos Pred Value"]
+recall <- conf_matrix$byClass[, "Recall"]
+f1_score <- 2 * (precision * recall) / (precision + recall)
+
+# Print the metrics for each class
+metrics <- data.frame(Precision = precision, Recall = recall, F1_Score = f1_score)
+print(metrics)
+
+
+
+
+
+# Predict "user input"
+
+# Train a Naive Bayes model on the entire dataset
+nb_model <- naiveBayes(label ~ ., data = data)
+
+# Function to get user input and make predictions
+predict_crop <- function(model, input_data, label_mapping) {
+  # Create a data frame with user input
+  user_data <- data.frame(input_data)
+  
+  # Make predictions using the trained model
+  predictions <- predict(model, newdata = user_data)
+  
+  # Map numerical predictions to actual crop names
+  predicted_crops <- label_mapping[predictions]
+  
+  # Display the predicted crop
+  cat("Predicted Crop:", predicted_crops, "\n")
+}
+
+label_mapping <- c("rice", "maize", "chickpea", "kidneybeans", "pigeonpeas", "mothbeans", "mungbean", 
+                   "blackgram", "lentil", "pomegranate", "banana", "mango", "grapes", "watermelon", 
+                   "muskmelon", "apple", "orange", "papaya", "coconut", "cotton", "jute", "coffee")
+# Example user input
+user_input <- list(
+  N = 57,
+  P = 60,
+  K = 84,
+  temperature = 19.1034,
+  humidity = 17.2618,
+  ph = 6.58677189,
+  rainfall = 75.49101167
+)
+
+# Make predictions based on user input
+predict_crop(nb_model, user_input, label_mapping)
+
 
