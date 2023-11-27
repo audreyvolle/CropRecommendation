@@ -16,19 +16,15 @@ getwd()
 setwd("/Users/audreyvolle/Desktop/School/MachineLearning/CropRecommendation/")
 data <- read.csv("Crop_recommendation.csv")
 
-# Check for missing values
-sum(is.na(data))
-
-# Explore the dataset
 summary(data)
 
 # Check for correlations between variables
-correlation_matrix <- cor(data[, -8])  # Exclude the 'label' column
+correlation_matrix <- cor(data[, -8])
 corrplot::corrplot(correlation_matrix, method = "number")
 
 # Sample a subset of observations for each label
-set.seed(123)  # for reproducibility
-sample_size_per_label <- 10  # Adjust as needed
+set.seed(123)
+sample_size_per_label <- 10
 
 sampled_data <- data %>%
   group_by(label) %>%
@@ -36,11 +32,11 @@ sampled_data <- data %>%
   ungroup()
 
 # Perform hierarchical clustering based on features
-dist_matrix <- dist(sampled_data[, -8])  # Exclude the 'label' column
+dist_matrix <- dist(sampled_data[, -8]) 
 hclust_result <- hclust(dist_matrix, method = "ward.D2")
 
 # Cut the dendrogram to get clusters
-num_clusters <- 3  # You can adjust this based on your desired number of clusters
+num_clusters <- 3
 cluster_labels <- cutree(hclust_result, k = num_clusters)
 
 # Combine labels based on clusters
@@ -51,7 +47,7 @@ cluster_combinations <- list(
   c("mothbeans", "chickpeas", "lentil", "mungbean"),
   c("apple", "grapes"),
   c("pomegranate", "orange")
-  # Add more clusters as needed based on your domain knowledge
+  # Add more clusters
 )
 
 # Update labels based on clusters
@@ -60,25 +56,22 @@ for (cluster_combination in cluster_combinations) {
   sampled_data$label[sampled_data$label %in% cluster_combination] <- combined_label
 }
 
-# Check the distribution of labels after combining
 table(sampled_data$label)
 
-# Plot the hierarchical clustering dendrogram with custom labels
 plot(hclust_result, main = "Hierarchical Clustering Dendrogram", sub = "", xlab = "", cex = 0.6, labels = sampled_data$label)
-
 
 
 
 # Classification
 
 # Split the data set into training and testing sets
-set.seed(123)  # for reproducibility
+set.seed(123)
 splitIndex <- createDataPartition(data$label, p = 0.8, list = FALSE)
 train_data <- data[splitIndex, ]
 test_data <- data[-splitIndex, ]
 
 # Remove highly correlated features
-cor_threshold <- 0.7  # Adjust as needed
+cor_threshold <- 0.7
 highly_cor_features <- findCorrelation(cor(train_data[, -8]), cutoff = cor_threshold)
 
 # Remove highly correlated features from the training and test sets
