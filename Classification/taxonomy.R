@@ -11,17 +11,19 @@ library(e1071)
 library(corrplot)
 library(pROC)
 
-# Load Data set
+# Load data set
 getwd()
 setwd("/Users/audreyvolle/Desktop/School/MachineLearning/CropRecommendation/CRDatasetswithLabels")
 
-#data <- read.csv("Crop_recommendation.csv")
-data <- read.csv("Cucurbitales.csv")
+#data <- read.csv("Original_Labels.csv")
+#data <- read.csv("Cucurbitales.csv")
 #data <- read.csv("Fabales.csv")
 #data <- read.csv("Faboideae.csv")
 #data <- read.csv("Sapindales.csv")
 #data <- read.csv("Vigna.csv")
-#data <- read.csv("poales.csv")
+#data <- read.csv("poales.csv"
+#data <- read.csv("Order_Labels.csv")
+data <- read.csv("Order_Labels_2.csv")
 
 #features_of_interest <- c("N", "P", "K", "temperature")
 features_of_interest <- c("N", "P", "K", "temperature", "humidity", "ph", "rainfall") 
@@ -94,3 +96,9 @@ f1_score <- 2 * (precision * recall) / (precision + recall)
 # Print the metrics for each class
 metrics <- data.frame(Precision = precision, Recall = recall, F1_Score = f1_score)
 print(metrics)
+
+# Calculate mean F1 score
+mean_f1_score <- mean(metrics$F1_Score, na.rm = TRUE)
+
+cat("Mean F1 Score for the entire dataset:\n")
+print(mean_f1_score)

@@ -1,67 +1,104 @@
-# Classification with Naive Bayes Algorithm
-# https://www.r-bloggers.com/2021/04/naive-bayes-classification-in-r/
+# Load necessary libraries
+if (!requireNamespace("e1071", quietly = TRUE)) {
+  install.packages("e1071")
+}
 
-library(naivebayes)
+library(caret)
 library(dplyr)
-library(ggplot2)
-library(psych)
+library(ROCR)
+library(naivebayes)
+library(e1071)
+library(corrplot)
+library(pROC)
 
-# Load the CSV file into a data frame
+# Load Data set
 getwd()
-setwd("/Users/audreyvolle/Desktop/School/MachineLearning/CropRecommendation/")
-your_data <- read.csv("Crop_recommendation.csv")
+setwd("/Users/audreyvolle/Desktop/School/MachineLearning/CropRecommendation/CRDatasetswithLabels")
 
-head(your_data)
+#data <- read.csv("Crop_recommendation.csv")
+#data <- read.csv("Cucurbitales.csv")
+#data <- read.csv("Fabales.csv")
+#data <- read.csv("Faboideae.csv")
+#data <- read.csv("Sapindales.csv")
+#data <- read.csv("Vigna.csv")
+#data <- read.csv("poales.csv")
+#data <- read.csv("Order_Labels.csv")
+data <- read.csv("Order_Labels_2.csv")
 
-#xtabs(~N+label, data = your_data)
+#features_of_interest <- c("N", "P", "K", "temperature")
+features_of_interest <- c("N", "P", "K", "temperature", "humidity", "ph", "rainfall") 
 
-# Split the data into training and testing sets (70% training, 30% testing)
-set.seed(123) # for reproducibility
-sample_index <- sample(1:nrow(your_data), 0.7*nrow(your_data))
-train_data <- your_data[sample_index, ]
-test_data <- your_data[-sample_index, ]
+summary(data)
 
-# Build Naive Bayes model
-nb_model <- naive_bayes(label ~ N + P + K + temperature + humidity + ph + rainfall, data = train_data)
+# Classification
 
-# Extract only the features used in the model from the test_data
-features <- c("N", "P", "K", "temperature", "humidity", "ph", "rainfall")
-test_features <- test_data[features]
+# Split the data set into training and testing sets
+set.seed(123)
+splitIndex <- createDataPartition(data$label, p = 0.8, list = FALSE)
+train_data <- data[splitIndex, ]
+test_data <- data[-splitIndex, ]
 
-# Make predictions using the Naive Bayes model
-predictions <- predict(nb_model, test_features)
+# Remove highly correlated features
+cor_threshold <- 0.7
+highly_cor_features <- findCorrelation(cor(train_data[, -8]), cutoff = cor_threshold)
 
-# Evaluate the accuracy of the model
-accuracy <- sum(predictions == test_data$label) / nrow(test_data) * 100
-print(paste("Accuracy of Naive Bayes model: ", accuracy, "%"))
+# Remove highly correlated features from the training and test sets
+train_data_filtered <- train_data[, c(features_of_interest, "label")]
+test_data_filtered <- test_data[, c(features_of_interest, "label")]
 
-# Extract predicted class labels
-predicted_labels <- as.character(predictions)
+# Train a Naive Bayes model on filtered data
+nb_model_filtered <- naiveBayes(label ~ ., data = train_data_filtered)
 
-# Generate confusion matrix
-confusion_matrix <- table(Actual = test_data$label, Predicted = predicted_labels)
-print("Confusion Matrix:")
-print(confusion_matrix)
+# Make predictions on the filtered test set
+predictions_filtered <- predict(nb_model_filtered, newdata = test_data_filtered)
 
-# Convert confusion matrix to data frame and set column names
-confusion_matrix_df <- as.data.frame.matrix(confusion_matrix)
-confusion_matrix_df <- cbind(Actual = rownames(confusion_matrix_df), confusion_matrix_df)
-rownames(confusion_matrix_df) <- NULL
-colnames(confusion_matrix_df) <- c("Actual", "Predicted", "Freq")
+# Convert predictions and reference to factors with the same levels
+predictions_filtered_factor <- factor(predictions_filtered, levels = levels(as.factor(test_data_filtered$label)))
 
-# Plot the confusion matrix
-ggplot(confusion_matrix_df, aes(x = Actual, y = Predicted, fill = Freq)) +
-  geom_tile() +
-  scale_fill_gradient(low = "white", high = "blue") +
-  theme_minimal() +
-  labs(x = "Actual", y = "Predicted", fill = "Frequency") +
-  ggtitle("Confusion Matrix")
+# Evaluate the model using confusion matrix
+confusion_matrix_filtered <- confusionMatrix(predictions_filtered_factor, as.factor(test_data_filtered$label))
+print(confusion_matrix_filtered)
 
-# You can also calculate precision, recall, and F1-score if needed
-precision <- confusion_matrix["rice", "rice"] / sum(confusion_matrix["rice", ])
-recall <- confusion_matrix["rice", "rice"] / sum(confusion_matrix["rice", ])
+# If you want to visualize ROC curve on filtered data for each class
+roc_curves <- lapply(unique(test_data_filtered$label), function(class) {
+  actual_class <- as.numeric(as.factor(test_data_filtered$label) == class)
+  predicted_class <- as.numeric(predictions_filtered_factor == class)
+  roc_values <- roc(actual_class, predicted_class)
+  return(roc_values)
+})
+
+# Plot ROC curves for each class
+colors <- rainbow(length(roc_curves))
+legend_labels <- levels(as.factor(test_data_filtered$label))
+plot(0, 0, type = "n", xlim = c(0, 1), ylim = c(0, 1), xlab = "False Positive Rate", ylab = "True Positive Rate", main = "ROC Curves (Filtered Data)")
+
+for (i in seq_along(roc_curves)) {
+  lines(roc_curves[[i]], col = colors[i], lwd = 2)
+}
+
+legend("bottomright", legend = legend_labels, col = colors, lwd = 2)
+
+
+# Calculate AUC on filtered data for each class
+auc_values_filtered <- sapply(roc_curves, function(roc_curve) auc(roc_curve))
+cat("AUC for each class (Filtered Data):\n")
+print(auc_values_filtered)
+
+
+# Extract confusion matrix
+conf_matrix <- confusionMatrix(predictions_filtered_factor, as.factor(test_data_filtered$label))
+
+# Extract precision, recall, and F1 score for each class
+precision <- conf_matrix$byClass[, "Pos Pred Value"]
+recall <- conf_matrix$byClass[, "Recall"]
 f1_score <- 2 * (precision * recall) / (precision + recall)
 
-print(paste("Precision: ", precision))
-print(paste("Recall: ", recall))
-print(paste("F1-score: ", f1_score))
+# Print the metrics for each class
+metrics <- data.frame(Precision = precision, Recall = recall, F1_Score = f1_score)
+print(metrics)
+
+# Calculate mean F1 score
+mean_f1_score <- mean(metrics$F1_Score, na.rm = TRUE)
+
+cat("Mean F1 Score for the entire dataset:\n")
+print(mean_f1_score)

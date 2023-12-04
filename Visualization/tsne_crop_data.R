@@ -8,8 +8,9 @@ library(ggplot2)
 
 # Load the CSV file into a data frame
 getwd()
-setwd("/Users/audreyvolle/Desktop/School/MachineLearning/CropRecommendation/")
-your_data <- read.csv("Crop_recommendation.csv")
+setwd("/Users/audreyvolle/Desktop/School/MachineLearning/CropRecommendation/CRDatasetswithLabels")
+
+data <- read.csv("Original_Labels.csv")
 
 # Perform t-SNE on your_data for different combinations of features
 
